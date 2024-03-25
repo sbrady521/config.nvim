@@ -374,6 +374,7 @@ require('lazy').setup({
       vim.keymap.set('n', '<leader>sh', builtin.help_tags, { desc = '[S]earch [H]elp' })
       vim.keymap.set('n', '<leader>sk', builtin.keymaps, { desc = '[S]earch [K]eymaps' })
       vim.keymap.set('n', '<leader>sf', builtin.find_files, { desc = '[S]earch [F]iles' })
+      vim.keymap.set('n', '<C-p>', builtin.find_files, { desc = 'Search Files' })
       vim.keymap.set('n', '<leader>ss', builtin.builtin, { desc = '[S]earch [S]elect Telescope' })
       vim.keymap.set('n', '<leader>sw', builtin.grep_string, { desc = '[S]earch current [W]ord' })
       vim.keymap.set('n', '<leader>sg', builtin.live_grep, { desc = '[S]earch by [G]rep' })
@@ -493,6 +494,7 @@ require('lazy').setup({
           -- Rename the variable under your cursor.
           --  Most Language Servers support renaming across files, etc.
           map('<leader>rn', vim.lsp.buf.rename, '[R]e[n]ame')
+          -- map('<leader>lf', vim.lsp.buf.formatting, '[L]sp [F]ormat')
 
           -- Execute a code action, usually your cursor needs to be on top of an error
           -- or a suggestion from your LSP for this to activate.
@@ -607,34 +609,54 @@ require('lazy').setup({
     end,
   },
 
-  { -- Autoformat
-    'stevearc/conform.nvim',
-    opts = {
-      notify_on_error = false,
-      format_on_save = function(bufnr)
-        -- Disable "format_on_save lsp_fallback" for languages that don't
-        -- have a well standardized coding style. You can add additional
-        -- languages here or re-enable it for the disabled ones.
-        local disable_filetypes = { c = true, cpp = true }
-        return {
-          timeout_ms = 500,
-          lsp_fallback = not disable_filetypes[vim.bo[bufnr].filetype],
-        }
-      end,
-      formatters_by_ft = {
-        lua = { 'stylua' },
-        -- Conform can also run multiple formatters sequentially
-        -- python = { "isort", "black" },
-        --
-        -- You can use a sub-list to tell conform to run *until* a formatter
-        -- is found.
-        -- javascript = { { "prettierd", "prettier" } },
-      },
-    },
+  -- { -- Autoformat
+  --   'stevearc/conform.nvim',
+  --   opts = {
+  --     notify_on_error = false,
+  --     format_on_save = function(bufnr)
+  --       -- Disable "format_on_save lsp_fallback" for languages that don't
+  --       -- have a well standardized coding style. You can add additional
+  --       -- languages here or re-enable it for the disabled ones.
+  --       local disable_filetypes = { c = true, cpp = true }
+  --       return {
+  --         timeout_ms = 500,
+  --         lsp_fallback = not disable_filetypes[vim.bo[bufnr].filetype],
+  --       }
+  --     end,
+  --     formatters_by_ft = {
+  --       lua = { 'stylua' },
+  --       typescript = { 'eslint_d' },
+  --       javascript = { 'eslint_d' },
+  --       -- Conform can also run multiple formatters sequentially
+  --       -- python = { "isort", "black" },
+  --       --
+  --       -- You can use a sub-list to tell conform to run *until* a formatter
+  --       -- is found.
+  --       -- javascript = { { "prettierd", "prettier" } },
+  --     },
+  --   },
+  -- },
+
+  {
+    'dense-analysis/ale',
+    config = function()
+      vim.g.ale_linters = {
+        javascript = {'eslint_d'},
+        typescript = {'eslint_d'},
+        lua = {'lua_language_server'}
+      }
+      vim.g.ale_fixers = {
+        javascript = {'eslint'},
+        typescript = {'eslint'},
+        typescriptreact = {'eslint'},
+      }
+    end
   },
 
   {
-    'nvim-tree/nvim-tree',
+    'nvim-tree/nvim-tree.lua',
+    version = '*',
+    lazy = false,
     dependencies = {
       'nvim-tree/nvim-web-devicons'
     },
@@ -642,6 +664,20 @@ require('lazy').setup({
       require('nvim-tree').setup {}
     end,
   },
+
+  {
+    'akinsho/bufferline.nvim', 
+    version = "*", 
+    dependencies = 'nvim-tree/nvim-web-devicons',
+    config = function ()
+      require('bufferline').setup {}
+      vim.keymap.set('n', '<C-h>', ':BufferLineCyclePrev<CR>', { desc = 'Previous buffer' })
+      vim.keymap.set('n', '<C-l>', ':BufferLineCycleNext<CR>', { desc = 'Next buffer' })
+      vim.keymap.set('n', '<leader>q', ':bd<CR>|:BufferLineGoToBuffer 1<CR>', { desc = '[q]uit buffer' })
+      vim.keymap.set('n', '<leader>bo', ':BufferLineCloseOther<CR>', { desc = '[b]uffer [o]nly' })
+    end
+  },
+
   { -- Autocompletion
     'hrsh7th/nvim-cmp',
     event = 'InsertEnter',
