@@ -102,13 +102,10 @@ vim.g.have_nerd_font = true
 vim.opt.number = true
 -- You can also add relative line numbers, to help with jumping.
 --  Experiment for yourself to see if you like it!
--- vim.opt.relativenumber = true
+vim.opt.relativenumber = true
 
 -- Enable mouse mode, can be useful for resizing splits for example!
 vim.opt.mouse = 'a'
-
--- Don't show the mode, since it's already in the status line
-vim.opt.showmode = false
 
 -- Sync clipboard between OS and Neovim.
 --  Remove this option if you want your OS clipboard to remain independent.
@@ -117,9 +114,6 @@ vim.opt.clipboard = 'unnamedplus'
 
 -- Enable break indent
 vim.opt.breakindent = true
-
--- Save undo history
-vim.opt.undofile = true
 
 -- Case-insensitive searching UNLESS \C or one or more capital letters in the search term
 vim.opt.ignorecase = true
@@ -130,14 +124,6 @@ vim.opt.signcolumn = 'yes'
 
 -- Decrease update time
 vim.opt.updatetime = 250
-
--- Decrease mapped sequence wait time
--- Displays which-key popup sooner
-vim.opt.timeoutlen = 300
-
--- Configure how new splits should be opened
-vim.opt.splitright = true
-vim.opt.splitbelow = true
 
 -- Sets how neovim will display certain whitespace characters in the editor.
 --  See `:help 'list'`
@@ -152,18 +138,19 @@ vim.opt.inccommand = 'split'
 vim.opt.cursorline = true
 
 -- Minimal number of screen lines to keep above and below the cursor.
-vim.opt.scrolloff = 10
+vim.opt.scrolloff = 15
 
+-- nvim-tree stuff
 vim.g.loaded_netrw = 1
 vim.g.loaded_netrwPlugin = 1
 vim.opt.termguicolors = true
 
--- [[ Basic Keymaps ]]
---  See `:help vim.keymap.set()`
-
 -- Set highlight on search, but clear on pressing <Esc> in normal mode
 vim.opt.hlsearch = true
 vim.keymap.set('n', '<Esc>', '<cmd>nohlsearch<CR>')
+
+-- Turn off annoying floating text
+vim.diagnostic.config({ virtual_text = false })
 
 -- Diagnostic keymaps
 vim.keymap.set('n', '[d', vim.diagnostic.goto_prev, { desc = 'Go to previous [D]iagnostic message' })
@@ -327,37 +314,15 @@ require('lazy').setup({
       { 'nvim-tree/nvim-web-devicons', enabled = vim.g.have_nerd_font },
     },
     config = function()
-      -- Telescope is a fuzzy finder that comes with a lot of different things that
-      -- it can fuzzy find! It's more than just a "file finder", it can search
-      -- many different aspects of Neovim, your workspace, LSP, and more!
-      --
-      -- The easiest way to use Telescope, is to start by doing something like:
-      --  :Telescope help_tags
-      --
-      -- After running this command, a window will open up and you're able to
-      -- type in the prompt window. You'll see a list of `help_tags` options and
-      -- a corresponding preview of the help.
-      --
-      -- Two important keymaps to use while in Telescope are:
-      --  - Insert mode: <c-/>
-      --  - Normal mode: ?
-      --
-      -- This opens a window that shows you all of the keymaps for the current
-      -- Telescope picker. This is really useful to discover what Telescope can
-      -- do as well as how to actually do it!
-
-      -- [[ Configure Telescope ]]
-      -- See `:help telescope` and `:help telescope.setup()`
       require('telescope').setup {
-        -- You can put your default mappings / updates / etc. in here
-        --  All the info you're looking for is in `:help telescope.setup()`
-        --
-        -- defaults = {
-        --   mappings = {
-        --     i = { ['<c-enter>'] = 'to_fuzzy_refine' },
-        --   },
-        -- },
-        -- pickers = {}
+        defaults = {
+          layout_config = {
+            width = 0.95
+          },
+          layout_strategy = "center",
+          sorting_strategy = "ascending",
+          path_display = { "absolute" }
+        },
         extensions = {
           ['ui-select'] = {
             require('telescope.themes').get_dropdown(),
@@ -376,11 +341,13 @@ require('lazy').setup({
       vim.keymap.set('n', '<leader>sf', builtin.find_files, { desc = '[S]earch [F]iles' })
       vim.keymap.set('n', '<C-p>', builtin.find_files, { desc = 'Search Files' })
       vim.keymap.set('n', '<leader>ss', builtin.builtin, { desc = '[S]earch [S]elect Telescope' })
-      vim.keymap.set('n', '<leader>sw', builtin.grep_string, { desc = '[S]earch current [W]ord' })
-      vim.keymap.set('n', '<leader>sg', builtin.live_grep, { desc = '[S]earch by [G]rep' })
+      vim.keymap.set('n', '<leader>sw', builtin.grep_string, { desc = '[S]earch current [W]ord'})
+      vim.keymap.set('n', '<leader>st', builtin.live_grep, { desc = '[S]earch [T]ext' })
       vim.keymap.set('n', '<leader>sd', builtin.diagnostics, { desc = '[S]earch [D]iagnostics' })
-      vim.keymap.set('n', '<leader>sr', builtin.resume, { desc = '[S]earch [R]esume' })
-      vim.keymap.set('n', '<leader>s.', builtin.oldfiles, { desc = '[S]earch Recent Files ("." for repeat)' })
+      vim.keymap.set('n', '<leader>s.', '<cmd>lua require("telescope.builtin").grep_string({ search = vim.fn.expand("<cword>") })<CR>', { desc = '[S]earch current word .' })
+
+      vim.keymap.set('n', '<leader>sl', builtin.resume, { desc = '[S]earch [L]ast' })
+      vim.keymap.set('n', '<leader>sr', builtin.oldfiles, { desc = '[S]earch [R]ecent Files' })
       vim.keymap.set('n', '<leader><leader>', builtin.buffers, { desc = '[ ] Find existing buffers' })
 
       -- Slightly advanced example of overriding default behavior and theme
@@ -609,50 +576,66 @@ require('lazy').setup({
     end,
   },
 
-  -- { -- Autoformat
-  --   'stevearc/conform.nvim',
-  --   opts = {
-  --     notify_on_error = false,
-  --     format_on_save = function(bufnr)
-  --       -- Disable "format_on_save lsp_fallback" for languages that don't
-  --       -- have a well standardized coding style. You can add additional
-  --       -- languages here or re-enable it for the disabled ones.
-  --       local disable_filetypes = { c = true, cpp = true }
-  --       return {
-  --         timeout_ms = 500,
-  --         lsp_fallback = not disable_filetypes[vim.bo[bufnr].filetype],
-  --       }
-  --     end,
-  --     formatters_by_ft = {
-  --       lua = { 'stylua' },
-  --       typescript = { 'eslint_d' },
-  --       javascript = { 'eslint_d' },
-  --       -- Conform can also run multiple formatters sequentially
-  --       -- python = { "isort", "black" },
-  --       --
-  --       -- You can use a sub-list to tell conform to run *until* a formatter
-  --       -- is found.
-  --       -- javascript = { { "prettierd", "prettier" } },
-  --     },
-  --   },
-  -- },
-
   {
-    'dense-analysis/ale',
+    "mfussenegger/nvim-lint",
+    dependencies = { "nvim-lua/plenary.nvim" },
     config = function()
-      vim.g.ale_linters = {
-        javascript = {'eslint_d'},
-        typescript = {'eslint_d'},
-        lua = {'lua_language_server'}
+      require("lint").linters_by_ft = {
+        javascript = { "eslint_d" },
+        javascriptreact = { "eslint_d" },
+        typescript = { "eslint_d" },
+        typescriptreact = { "eslint_d" },
       }
-      vim.g.ale_fixers = {
-        javascript = {'eslint'},
-        typescript = {'eslint'},
-        typescriptreact = {'eslint'},
-      }
-    end
+
+      vim.keymap.set("n", "gl", "<cmd>lua require('lint').try_lint()<CR>", {silent = true})
+
+    end,
   },
 
+  { -- Autoformat
+    'stevearc/conform.nvim',
+    opts = {
+      notify_on_error = false,
+      format_on_save = function(bufnr)
+        -- Disable "format_on_save lsp_fallback" for languages that don't
+        -- have a well standardized coding style. You can add additional
+        -- languages here or re-enable it for the disabled ones.
+        local disable_filetypes = { c = true, cpp = true }
+        return {
+          timeout_ms = 500,
+          lsp_fallback = not disable_filetypes[vim.bo[bufnr].filetype],
+        }
+      end,
+      formatters_by_ft = {
+        lua = { 'stylua' },
+        typescript = { 'prettierd' },
+        javascript = { 'prettierd' },
+        -- Conform can also run multiple formatters sequentially
+        -- python = { "isort", "black" },
+        --
+        -- You can use a sub-list to tell conform to run *until* a formatter
+        -- is found.
+        -- javascript = { { "prettierd", "prettier" } },
+      },
+    },
+  },
+
+  -- {
+  --   'dense-analysis/ale',
+  --   config = function()
+  --     vim.g.ale_linters = {
+  --       javascript = {'eslint_d'},
+  --       typescript = {'eslint_d'},
+  --       lua = {'lua_language_server'}
+  --     }
+  --     vim.g.ale_fixers = {
+  --       javascript = {'eslint'},
+  --       typescript = {'eslint'},
+  --       typescriptreact = {'eslint'},
+  --     }
+  --   end
+  -- },
+  --
   {
     'nvim-tree/nvim-tree.lua',
     version = '*',
