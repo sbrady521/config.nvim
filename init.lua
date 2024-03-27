@@ -25,6 +25,8 @@ vim.opt.updatetime = 250
 
 -- Preview substitutions live, as you type!
 vim.opt.inccommand = 'split'
+vim.opt.incsearch = true
+vim.opt.hlsearch = false
 
 -- Show which line your cursor is on
 vim.opt.cursorline = true
@@ -54,8 +56,8 @@ vim.diagnostic.config({
 })
 
 -- Diagnostic keymaps
-vim.keymap.set('n', '[d', vim.diagnostic.goto_prev, { desc = 'Go to previous [D]iagnostic message' })
-vim.keymap.set('n', ']d', vim.diagnostic.goto_next, { desc = 'Go to next [D]iagnostic message' })
+vim.keymap.set('n', '<leader>dp', vim.diagnostic.goto_prev, { desc = 'Go to [D]iagnostic [P]revious' })
+vim.keymap.set('n', '<leader>dn', vim.diagnostic.goto_next, { desc = 'Go to [D]iagnostic [N]ext' })
 vim.keymap.set('n', 'gl', vim.diagnostic.open_float, { desc = 'Show diagnostic [E]rror messages' })
 
 vim.keymap.set('n', '<leader>w', ':w<CR>', { desc = 'Save' })
@@ -80,25 +82,22 @@ vim.opt.rtp:prepend(lazypath)
 require('lazy').setup({
   'tpope/vim-sleuth', -- Detect tabstop and shiftwidth automatically
 
-  { 
-    'numToStr/Comment.nvim', 
-    opts = { 
+  {
+    'numToStr/Comment.nvim',
+    opts = {
       toggler = { line = '<leader>/' },
-      opleader = { line = '/' } 
-    } 
+      opleader = { line = '<leader>/' }
+    }
   },
 
   {
     'lewis6991/gitsigns.nvim',
     opts = {
-      signs = {
-        add = { text = '+' },
-        change = { text = '~' },
-        delete = { text = '_' },
-        topdelete = { text = '‾' },
-        changedelete = { text = '~' },
-      },
-    },
+      on_attach = function(bufnr)
+        vim.keymap.set('n', '<leader>gb', require('gitsigns').blame_line, { buffer = bufnr, desc = '[G]it [B]lame' })
+        vim.keymap.set('n', '<leader>gl', require('gitsigns').blame_line, { buffer = bufnr, desc = '[G]it B[l]ame' })
+      end,
+    }
   },
 
   {
@@ -123,11 +122,12 @@ require('lazy').setup({
         end,
       },
       { 'nvim-telescope/telescope-ui-select.nvim' },
-      { 'nvim-tree/nvim-web-devicons', enabled = vim.g.have_nerd_font },
+      { 'nvim-tree/nvim-web-devicons',            enabled = vim.g.have_nerd_font },
     },
     config = function()
       require('telescope').setup {
         defaults = {
+          file_ignore_patterns = { "index.ts" },
           layout_config = {
             width = 0.95
           },
@@ -153,10 +153,12 @@ require('lazy').setup({
       vim.keymap.set('n', '<leader>sf', builtin.find_files, { desc = '[S]earch [F]iles' })
       vim.keymap.set('n', '<C-p>', builtin.find_files, { desc = 'Search Files' })
       vim.keymap.set('n', '<leader>ss', builtin.builtin, { desc = '[S]earch [S]elect Telescope' })
-      vim.keymap.set('n', '<leader>sw', builtin.grep_string, { desc = '[S]earch current [W]ord'})
+      vim.keymap.set('n', '<leader>sw', builtin.grep_string, { desc = '[S]earch current [W]ord' })
       vim.keymap.set('n', '<leader>st', builtin.live_grep, { desc = '[S]earch [T]ext' })
       vim.keymap.set('n', '<leader>sd', builtin.diagnostics, { desc = '[S]earch [D]iagnostics' })
-      vim.keymap.set('n', '<leader>s.', '<cmd>lua require("telescope.builtin").grep_string({ search = vim.fn.expand("<cword>") })<CR>', { desc = '[S]earch current word .' })
+      vim.keymap.set('n', '<leader>s.',
+        '<cmd>lua require("telescope.builtin").grep_string({ search = vim.fn.expand("<cword>") })<CR>',
+        { desc = '[S]earch current word .' })
 
       vim.keymap.set('n', '<leader>sl', builtin.resume, { desc = '[S]earch [L]ast' })
       vim.keymap.set('n', '<leader>sr', builtin.oldfiles, { desc = '[S]earch [R]ecent Files' })
@@ -217,6 +219,8 @@ require('lazy').setup({
           --  Most Language Servers support renaming across files, etc.
           map('<leader>rn', vim.lsp.buf.rename, '[R]e[n]ame')
 
+          map('<leader>rs', '<cmd>LspRestart<CR>', '[R]e[s]art')
+
           -- Opens a popup that displays documentation about the word under your cursor
           --  See `:help K` for why this keymap.
           map('K', vim.lsp.buf.hover, 'Hover Documentation')
@@ -225,7 +229,10 @@ require('lazy').setup({
           --  For example, in C this would take you to the header.
           map('gD', vim.lsp.buf.declaration, '[G]oto [D]eclaration')
 
-          map('<leader>f', vim.lsp.buf.format, '[F]ormat')
+          local function format_with_timeout()
+            vim.lsp.buf.format({ timeout_ms = 10000 })
+          end
+          map('<leader>f', format_with_timeout, '[F]ormat')
           map('<leader>a', vim.lsp.buf.code_action, 'Code [A]ction')
 
           local client = vim.lsp.get_client_by_id(event.data.client_id)
@@ -293,7 +300,7 @@ require('lazy').setup({
           require("none-ls.formatting.eslint_d"),
           require("none-ls.diagnostics.eslint_d"),
           require("none-ls.code_actions.eslint_d")
-        },
+        }
       })
     end,
   },
@@ -305,7 +312,7 @@ require('lazy').setup({
     dependencies = {
       'nvim-tree/nvim-web-devicons'
     },
-    config = function ()
+    config = function()
       require('nvim-tree').setup {
         update_focused_file = { enable = true },
         actions = {
@@ -320,10 +327,10 @@ require('lazy').setup({
   },
 
   {
-    'akinsho/bufferline.nvim', 
-    version = "*", 
+    'akinsho/bufferline.nvim',
+    version = "*",
     dependencies = 'nvim-tree/nvim-web-devicons',
-    config = function ()
+    config = function()
       require('bufferline').setup {}
       vim.keymap.set('n', '<C-h>', ':BufferLineCyclePrev<CR>', { desc = 'Previous buffer' })
       vim.keymap.set('n', '<C-l>', ':BufferLineCycleNext<CR>', { desc = 'Next buffer' })
@@ -343,7 +350,7 @@ require('lazy').setup({
       local cmp = require 'cmp'
 
       cmp.setup {
-        completion = { 
+        completion = {
           completeopt = 'menu,menuone,noinsert',
           keyword_length = 3
         },
@@ -354,8 +361,13 @@ require('lazy').setup({
           ['<C-k>'] = cmp.mapping.select_prev_item(),
         },
         sources = {
-          { name = 'nvim_lsp' },
+          { name = 'nvim_lsp', max_item_count = 5 },
           { name = 'path' },
+          { name = 'buffer', max_item_count = 5 },
+        },
+        window = {
+          completion = { border = 'rounded' },
+          documentation = { border = 'rounded' }
         },
       }
     end,
@@ -391,6 +403,9 @@ require('lazy').setup({
       require('mini.surround').setup()
     end,
   },
+
+  { 'm4xshen/autoclose.nvim', opts = {} },
+
   { -- Highlight, edit, and navigate code
     'nvim-treesitter/nvim-treesitter',
     build = ':TSUpdate',
